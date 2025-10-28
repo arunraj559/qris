@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>𝓓𝓐𝓢𝓗𝓑𝓞𝓐𝓡𝓓 𝓢𝓔𝓛𝓘𝓢𝓘𝓗 𝓠𝓡𝓘𝓢 𝓣𝓥𝓣𝓞𝓣𝓞</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  body {
+    margin:0; padding:20px; font-family:'Segoe UI',sans-serif;
+    background:#121212; color:#eee; transition:all .4s ease;
+    position:relative; overflow-x:hidden;
+  }
+  body.light { background:#f8f9fa; color:#222; }
+
+  /* Background SMB Watermark */
+  .background-text {
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    font-size:10rem;
+    font-weight:bold;
+    color:rgba(255,255,255,0.05);
+    letter-spacing:10px;
+    pointer-events:none;
+    user-select:none;
+    white-space:nowrap;
+    transition:color 0.4s ease;
+  }
+  body.light .background-text {
+    color:rgba(0,0,0,0.05); /* SMB berubah jadi abu tua transparan di light mode */
+  }
+
+  h1 { text-align:center; color:#FFD700; margin-bottom:10px; font-size:2rem; transition:color 0.4s ease; }
+  body.light h1 { color:#b8860b; } /* Gold yang lebih gelap di mode terang */
+
+  textarea, input, select {
+    width:100%; padding:12px; margin-top:8px;
+    border:1px solid rgba(255,215,0,0.3);
+    border-radius:10px;
+    background:rgba(255,255,255,0.05);
+    color:#eee; font-size:1rem;
+    backdrop-filter:blur(6px);
+    transition:all 0.4s ease;
+  }
+  body.light textarea, body.light input, body.light select {
+    background:#fff; color:#222; border:1px solid #aaa;
+  }
+
+  /* Elegant Buttons */
+  button {
+    padding:12px 20px;
+    border:none;
+    border-radius:50px;
+    cursor:pointer;
+    font-size:1rem;
+    font-weight:600;
+    margin-top:10px;
+    transition:all .3s ease;
+    background: linear-gradient(45deg,#FFD700,#FFC107);
+    color:#222;
+    box-shadow:0 4px 12px rgba(255,215,0,0.4);
+  }
+  button:hover { transform:scale(1.05); box-shadow:0 6px 16px rgba(255,215,0,0.6); }
+  button.blue {background: linear-gradient(45deg,#2196f3,#1e88e5); color:#fff;}
+  button.red {background: linear-gradient(45deg,#f44336,#d32f2f); color:#fff;}
+
+  table {
+    width:100%; border-collapse:collapse; margin-top:20px;
+    font-size:0.95rem; overflow:hidden; border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+    transition:all .4s ease;
+  }
+  th,td {
+    padding:12px; border:1px solid rgba(255,255,255,0.1); text-align:center;
+  }
+  th { background:rgba(255,215,0,0.2); color:#FFD700; font-weight:600; position:sticky; top:0; }
+  tr.klop{background:rgba(76,175,80,0.2);}
+  tr.beda{background:rgba(255,152,0,0.2);}
+  tr.missing{background:rgba(244,67,54,0.2);}
+  body.light th { background:rgba(255,215,0,0.15); color:#b8860b; }
+  body.light td { color:#222; background:rgba(0,0,0,0.02); }
+
+  .summary,.total {
+    margin:15px 0; text-align:center; font-weight:600; font-size:1.2rem;
+    color:#FFD700; transition:color 0.4s ease;
+  }
+  body.light .summary, body.light .total { color:#b8860b; }
+
+  .notif {
+    display:none; background:#f44336; color:white;
+    padding:12px; border-radius:8px; text-align:center;
+    animation:blink 1s infinite;
+  }
+  @keyframes blink {0%{opacity:1;}50%{opacity:.4;}100%{opacity:1;}}
+
+  .flex {display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  @media(max-width:600px){ th,td{font-size:0.8rem;} button{width:100%;}}
+</style>
+</head>
+<body>
+<div class="background-text">SMB</div>
+<h1>𝓓𝓐𝓢𝓗𝓑𝓞𝓐𝓡𝓓 𝓢𝓔𝓛𝓘𝓢𝓘𝓗 𝓠𝓡𝓘𝓢 𝓣𝓥𝓣𝓞𝓣𝓞</h1>
+
+<label>Data Admin</label>
+<textarea id="adminData">Mineral001 160000
+Mineral002 175000</textarea>
+
+<label>Data QRIS</label>
+<textarea id="qrisData">Mineral001 160000
+Mineral003 180000</textarea>
+
+<button type="button" onclick="generateDashboard()">🚀 Tampilkan Dashboard</button>
+<div class="flex">
+  <input type="text" id="searchBox" placeholder="🔍 Cari Order ID...">
+  <select id="filterStatus">
+    <option value="all">Semua Status</option>
+    <option value="KLOP">KLOP</option>
+    <option value="BEDA">BEDA</option>
+    <option value="HILANG">HILANG</option>
+  </select>
+  <button class="blue" type="button" onclick="exportCSV()">📄 Export CSV</button>
+  <button class="blue" type="button" onclick="exportPDF()">📑 Export PDF</button>
+  <button class="red" type="button" onclick="toggleTheme()">🌗 Mode</button>
+</div>
+
+<div class="summary" id="missingSummary"></div>
+<div class="notif" id="notifSelisih">⚠ Selisih besar terdeteksi! Mohon cek ulang data.</div>
+<canvas id="statusChart" height="100"></canvas>
+<div id="output"></div>
+<div class="total" id="totalBiaya"></div>
+<div class="total" id="totalPendapatan"></div>
+<div class="total" id="totalSelisih"></div>
+
+<script>
+let chartInstance=null, dashboardData=[], darkMode=true;
+
+function toggleAutoTheme(){
+  const hour=new Date().getHours();
+  if(hour>=6 && hour<18){document.body.classList.add("light"); darkMode=false;}
+}
+toggleAutoTheme();
+
+function toggleTheme(){
+  darkMode=!darkMode;
+  document.body.classList.toggle("light",!darkMode);
+}
+
+function parseData(text){
+  return text.trim().split('\n').filter(l=>l).map(l=>{
+    const [id,...nom]=l.trim().split(/\s+/);
+    return {order:id.toUpperCase(), nominal:parseFloat(nom.join('').replace(/[^0-9.]/g,''))||0};
+  });
+}
+
+function generateDashboard(){
+  const admin=parseData(document.getElementById("adminData").value);
+  const qris=parseData(document.getElementById("qrisData").value);
+  const aMap=new Map(admin.map(x=>[x.order,x.nominal]));
+  const qMap=new Map(qris.map(x=>[x.order,x.nominal]));
+  const all=new Set([...aMap.keys(),...qMap.keys()]);
+  let klop=0,beda=0,hilang=0,miss=[],big=false,totalSelisih=0;
+  dashboardData=[];
+  all.forEach(id=>{
+    const a=aMap.get(id)??null, q=qMap.get(id)??null;
+    let selisih=0,st,cls;
+    if(a!=null && q!=null){
+      selisih=a-q;
+      if(a===q){st="KLOP";cls="klop";klop++;}
+      else{st="BEDA";cls="beda";beda++; totalSelisih+=Math.abs(selisih); if(Math.abs(selisih)>10000)big=true;}
+    }else if(a!=null){
+      st="HILANG DI QRIS";cls="missing";hilang++;miss.push("ADMIN:"+id);big=true; totalSelisih+=a;
+    }else{
+      st="HILANG DI ADMIN";cls="missing";hilang++;miss.push("QRIS:"+id);big=true; totalSelisih+=q;
+    }
+    dashboardData.push({id,a:a??0,q:q??0,selisih:(a!=null&&q!=null)?selisih:null,st,cls});
+  });
+  render(miss,klop,beda,hilang,qris,big,totalSelisih);
+}
+
+function render(miss,klop,beda,hilang,qris,big,totalSelisih){
+  applyFilter();
+  document.getElementById("missingSummary").innerHTML=miss.length?`Data hilang:<br>${miss.map(m=>'🔺 '+m).join('<br>')}`:"✅ Semua data lengkap.";
+  document.getElementById("notifSelisih").style.display=big?"block":"none";
+  renderChart(klop,beda,hilang);
+  renderBiaya(qris,totalSelisih);
+}
+
+function applyFilter(){
+  const term=document.getElementById("searchBox").value.toUpperCase();
+  const filter=document.getElementById("filterStatus").value;
+  const filt=dashboardData.filter(r=>(filter==='all'||(filter==='HILANG'?r.st.includes('HILANG'):r.st===filter))&&r.id.includes(term));
+  let html=`<table><tr><th>Order ID</th><th>Admin</th><th>QRIS</th><th>Selisih</th><th>Status</th></tr>`;
+  filt.forEach(r=>html+=`<tr class="${r.cls}">
+    <td>${r.id}</td>
+    <td>${r.a.toLocaleString()}</td>
+    <td>${r.q.toLocaleString()}</td>
+    <td>${r.selisih!==null?r.selisih.toLocaleString():"-"}</td>
+    <td>${r.st}</td>
+  </tr>`);
+  html+='</table>'; document.getElementById("output").innerHTML=html;
+}
+document.getElementById("searchBox").addEventListener("input",applyFilter);
+document.getElementById("filterStatus").addEventListener("change",applyFilter);
+
+function renderChart(klop,beda,hilang){
+  if(chartInstance)chartInstance.destroy();
+  chartInstance=new Chart(document.getElementById("statusChart"),{
+    type:'bar',
+    data:{labels:['KLOP','BEDA','HILANG'],datasets:[{data:[klop,beda,hilang],backgroundColor:['#4caf50','#ff9800','#f44336']}]},
+    options:{responsive:true,plugins:{tooltip:{enabled:true}},scales:{y:{beginAtZero:true}}}
+  });
+}
+
+function renderBiaya(qris,totalSelisih){
+  const totalPendapatan=qris.reduce((s,x)=>s+x.nominal,0);
+  const biaya=totalPendapatan*0.012;
+  document.getElementById("totalBiaya").innerText=`💳 Biaya QRIS (1.2%): Rp ${biaya.toLocaleString()}`;
+  document.getElementById("totalPendapatan").innerText=`💰 Total Pendapatan: Rp ${totalPendapatan.toLocaleString()}`;
+  document.getElementById("totalSelisih").innerText=`⚠️ Total Selisih: Rp ${totalSelisih.toLocaleString()}`;
+}
+
+function exportCSV(){
+  let csv='Order ID,Admin,QRIS,Selisih,Status\n';
+  dashboardData.forEach(r=>csv+=`${r.id},${r.a??'-'},${r.q??'-'},${r.selisih??'-'},${r.st}\n`);
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='Dashboard.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF(){
+  const { jsPDF } = window.jspdf; const doc=new jsPDF(); doc.text("Dashboard Order ID",14,10);
+  let y=20; dashboardData.forEach(r=>{doc.text(`${r.id} | Admin:${r.a??'-'} | QRIS:${r.q??'-'} | Selisih:${r.selisih??'-'} | ${r.st}`,14,y); y+=8;});
+  doc.save('Dashboard.pdf');
+}
+</script>
+</body>
+</html>
